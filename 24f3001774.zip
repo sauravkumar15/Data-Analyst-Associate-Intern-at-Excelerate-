@@ -1,0 +1,68 @@
+from flask import Flask, render_template, request
+import csv
+
+app = Flask(__name__)
+
+def read_data():
+    data = []
+    with open('data.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            data.append(row)
+    return data
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    results = []
+    search_type = None
+    id_value = None
+    if request.method == 'POST':
+        search_type = request.form.get('search_type')
+        id_value = request.form.get('id_value')
+        data = read_data()
+        if search_type == 'student':
+            results = [{'Course id': row['Course id'], 'Marks': row['Marks']} for row in data if row['Student id'] == id_value]
+        elif search_type == 'course':
+            results = [{'Student id': row['Student id'], 'Marks': row['Marks']} for row in data if row['Course id'] == id_value]
+    return render_template('index.html', results=results, search_type=search_type, id_value=id_value)
+
+if __name__ == '__main__':
+    app.run()
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student/Course Marks</title>
+</head>
+<body>
+    <h2>Search Marks</h2>
+    <form method="post">
+        <input type="radio" name="search_type" value="student" required {% if search_type=='student' %}checked{% endif %}> Student ID
+        <input type="radio" name="search_type" value="course" {% if search_type=='course' %}checked{% endif %}> Course ID
+        <input type="text" name="id_value" value="{{ id_value if id_value else '' }}" required>
+        <input type="submit" value="Search">
+    </form>
+    {% if results %}
+        <h3>Results:</h3>
+        <table border="1">
+            <tr>
+                {% if search_type == 'student' %}
+                    <th>Course ID</th><th>Marks</th>
+                {% else %}
+                    <th>Student ID</th><th>Marks</th>
+                {% endif %}
+            </tr>
+            {% for row in results %}
+            <tr>
+                <td>{{ row.keys()|list[0]|capitalize }}</td>
+                <td>{{ row.values()|list[0] }}</td>
+            </tr>
+            <tr>
+                <td>{{ row.keys()|list[1]|capitalize }}</td>
+                <td>{{ row.values()|list[1] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</body>
+</html>
