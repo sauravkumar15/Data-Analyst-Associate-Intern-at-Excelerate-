@@ -1,0 +1,109 @@
+data.csv
+Student id,Course id,Marks
+1001,2001,56
+1002,2001,67
+1003,2001,78
+1004,2001,90
+1005,2001,45
+1001,2002,59
+1002,2002,92
+1007,2002,99
+1008,2002,81
+1003,2003,43
+1004,2003,45
+1060,2003,60
+1005,2004,81
+1008,2004,97
+1030,2004,87
+1011,2004,35
+1090,2004,33
+
+app.py
+from flask import Flask, render_template, request
+import csv
+
+app = Flask(__name__)
+
+def read_data():
+    data = []
+    with open('data.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            data.append(row)
+    return data
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    results = []
+    error = ''
+    search_type = None
+    id_value = ''
+    total_marks = 0
+
+    if request.method == 'POST':
+        search_type = request.form.get('search_type')
+        id_value = request.form.get('id_value')
+        data = read_data()
+        if search_type == 'student':
+            student_results = [row for row in data if row['Student id'] == id_value]
+            if not student_results:
+                error = "Invalid Student ID"
+            else:
+                results = [[row['Course id'], row['Marks']] for row in student_results]
+                total_marks = sum(int(row['Marks']) for row in student_results)
+        elif search_type == 'course':
+            course_results = [row for row in data if row['Course id'] == id_value]
+            if not course_results:
+                error = "Invalid Course ID"
+            else:
+                results = [[row['Student id'], row['Marks']] for row in course_results]
+    return render_template('index.html',
+                           results=results,
+                           search_type=search_type,
+                           id_value=id_value,
+                           total_marks=total_marks,
+                           error=error)
+
+if __name__ == '__main__':
+    app.run()
+
+
+templates/index.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student/Course Marks</title>
+</head>
+<body>
+    <h2>Lab Assignment Week 4</h2>
+    <form method="post">
+        <label><input type="radio" name="search_type" value="student" required {% if search_type=='student' %}checked{% endif %}> Student ID</label>
+        <label><input type="radio" name="search_type" value="course" {% if search_type=='course' %}checked{% endif %}> Course ID</label>
+        <input type="text" name="id_value" value="{{ id_value if id_value else '' }}" required>
+        <input type="submit" value="Search">
+    </form>
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    {% if results %}
+        {% if search_type == 'student' %}
+            <h3>Student Details</h3>
+            <table border="1">
+                <tr><th>Course ID</th><th>Marks</th></tr>
+                {% for r in results %}
+                    <tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td></tr>
+                {% endfor %}
+                <tr><td>Total</td><td>{{ total_marks }}</td></tr>
+            </table>
+        {% elif search_type == 'course' %}
+            <h3>Course Details</h3>
+            <table border="1">
+                <tr><th>Student ID</th><th>Marks</th></tr>
+                {% for r in results %}
+                    <tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td></tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
